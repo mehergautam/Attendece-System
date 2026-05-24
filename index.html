@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Portal – Padmashri Computer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#091e42;--blue:#2ab5a0;--blue2:#1f9e8e;
+  --orange:#e87722;--white:#fff;--off:#f7f9fc;--text:#101828;--muted:#475467;
+  --tr:.3s cubic-bezier(.4,0,.2,1);--r:14px;
+}
+body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--off);min-height:100vh}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;font-family:inherit}
+
+/* ── TOPBAR ── */
+.topbar{background:#fff;border-bottom:1px solid rgba(0,0,0,.06);padding:14px 5%;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.04)}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-brand h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:1rem;font-weight:700;color:var(--navy)}
+.topbar-brand span{font-size:.72rem;color:var(--muted);display:block}
+.back-link{font-size:.85rem;color:var(--blue);font-weight:600;display:flex;align-items:center;gap:4px}
+
+/* ── LOGIN ── */
+.login-wrap{min-height:calc(100vh - 65px);display:flex;align-items:center;justify-content:center;padding:2rem}
+.login-card{background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.08);padding:2.5rem;width:100%;max-width:400px}
+.login-card h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.4rem;font-weight:800;color:var(--navy);margin-bottom:.3rem}
+.login-card p{font-size:.88rem;color:var(--muted);margin-bottom:1.8rem}
+.field{margin-bottom:1.1rem}
+.field label{display:block;font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:.4rem}
+.field input{width:100%;padding:.72rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.92rem;color:var(--text);outline:none;transition:border var(--tr)}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(42,181,160,.1)}
+.btn-primary{width:100%;padding:.85rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;font-weight:700;font-size:.95rem;box-shadow:0 6px 20px rgba(42,181,160,.3);transition:all var(--tr);margin-top:.5rem}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(42,181,160,.4)}
+.err{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;padding:.65rem 1rem;font-size:.84rem;margin-bottom:1rem;display:none}
+
+/* ── DASHBOARD ── */
+.dashboard{max-width:600px;margin:0 auto;padding:2rem 1.5rem}
+.welcome-card{background:linear-gradient(135deg,var(--blue),#177a6d);border-radius:20px;padding:1.8rem;color:#fff;margin-bottom:1.5rem}
+.welcome-card h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:.3rem}
+.welcome-card p{font-size:.88rem;opacity:.85}
+.info-row{display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap}
+.info-chip{background:rgba(255,255,255,.2);border-radius:50px;padding:.3rem .9rem;font-size:.78rem;font-weight:600}
+
+/* ── SESSION CARD ── */
+.session-card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.06);padding:2rem;margin-bottom:1.5rem;text-align:center}
+.session-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.1rem;font-weight:700;color:var(--navy);margin-bottom:.5rem}
+.session-card p{font-size:.88rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6}
+
+/* ── TIMER ── */
+.timer-ring{width:160px;height:160px;margin:0 auto 1.5rem;position:relative}
+.timer-ring svg{transform:rotate(-90deg)}
+.timer-ring .bg{fill:none;stroke:#f0f4f8;stroke-width:10}
+.timer-ring .progress{fill:none;stroke:var(--blue);stroke-width:10;stroke-linecap:round;stroke-dasharray:408;stroke-dashoffset:408;transition:stroke-dashoffset 1s linear}
+.timer-ring .time-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.timer-ring .time-text span{display:block;font-family:'Plus Jakarta Sans',sans-serif;font-size:1.6rem;font-weight:800;color:var(--navy)}
+.timer-ring .time-text small{font-size:.72rem;color:var(--muted);font-weight:600}
+
+.btn-start{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border:none;border-radius:50px;padding:.85rem 2.5rem;font-size:1rem;font-weight:700;box-shadow:0 8px 24px rgba(42,181,160,.35);transition:all var(--tr)}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(42,181,160,.45)}
+.btn-start:disabled{background:#94a3b8;box-shadow:none;transform:none;cursor:not-allowed}
+
+.status-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#94a3b8;margin-right:6px;vertical-align:middle}
+.status-dot.active{background:#22c55e;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── ATTENDANCE HISTORY ── */
+.history-card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.06);padding:1.5rem;margin-bottom:1.5rem}
+.history-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:1rem}
+.att-row{display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid #f1f5f9;font-size:.87rem}
+.att-row:last-child{border:none}
+.att-date{color:var(--muted)}
+.att-badge{padding:.25rem .75rem;border-radius:20px;font-size:.75rem;font-weight:700}
+.att-present{background:#dcfce7;color:#16a34a}
+.att-absent{background:#fee2e2;color:#dc2626}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
+.stat-card{background:#fff;border-radius:16px;padding:1.2rem;box-shadow:0 4px 16px rgba(0,0,0,.05);text-align:center}
+.stat-card .num{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.8rem;font-weight:800;color:var(--blue)}
+.stat-card .lbl{font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:.2rem}
+.stat-card .warn{color:#f59e0b}
+.stat-card .good{color:#22c55e}
+
+/* ── POPUP OVERLAY ── */
+.popup-overlay{position:fixed;inset:0;background:rgba(9,30,66,.7);backdrop-filter:blur(6px);z-index:999;display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity .3s}
+.popup-overlay.show{opacity:1;pointer-events:all}
+.popup-box{background:#fff;border-radius:24px;padding:2.5rem;max-width:380px;width:100%;text-align:center;transform:scale(.9);transition:transform .3s}
+.popup-overlay.show .popup-box{transform:scale(1)}
+.popup-icon{font-size:3.5rem;margin-bottom:1rem}
+.popup-box h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3rem;font-weight:800;color:var(--navy);margin-bottom:.5rem}
+.popup-box p{font-size:.9rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6}
+.btn-ok{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border:none;border-radius:50px;padding:.85rem 2.5rem;font-size:1rem;font-weight:700;box-shadow:0 8px 24px rgba(42,181,160,.35);transition:all var(--tr);width:100%}
+.btn-ok:hover{transform:translateY(-2px)}
+
+/* ── LOGOUT ── */
+.logout-btn{background:transparent;border:1.5px solid #e2e8f0;border-radius:8px;padding:.45rem 1rem;font-size:.82rem;color:var(--muted);transition:all var(--tr)}
+.logout-btn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── ALREADY DONE ── */
+.done-badge{background:linear-gradient(135deg,#dcfce7,#bbf7d0);border:1.5px solid #86efac;border-radius:16px;padding:1.2rem;display:flex;align-items:center;gap:.8rem;margin-bottom:1rem}
+.done-badge span{font-size:1.5rem}
+.done-badge p{font-size:.88rem;font-weight:600;color:#15803d;margin:0}
+.done-badge small{font-size:.75rem;color:#16a34a;font-weight:400}
+
+/* Responsive */
+@media(max-width:480px){
+  .dashboard{padding:1.2rem 1rem}
+  .login-card{padding:1.8rem}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div>
+      <h1>Padmashri Computer</h1>
+      <span>Student Attendance Portal</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <a href="/" class="back-link">← Main Site</a>
+    <button class="logout-btn" id="logoutBtn" style="display:none" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-card">
+    <h2>Student Login</h2>
+    <p>Enter your roll number and password to mark your attendance.</p>
+    <div class="err" id="loginErr">Invalid roll number or password. Please try again.</div>
+    <div class="field">
+      <label>Roll Number</label>
+      <input type="text" id="rollInput" placeholder="e.g. MSCIT001" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="passInput" placeholder="Enter your password" />
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Login →</button>
+    <p style="text-align:center;font-size:.78rem;color:var(--muted);margin-top:1rem">Forgot password? Contact your center admin.</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboardScreen" style="display:none">
+  <div class="dashboard">
+
+    <!-- Welcome -->
+    <div class="welcome-card">
+      <h2>👋 Hello, <span id="studentName">Student</span>!</h2>
+      <p>Welcome to your attendance portal. Start your session to mark today's attendance.</p>
+      <div class="info-row">
+        <span class="info-chip" id="rollDisplay">MSCIT001</span>
+        <span class="info-chip" id="dateDisplay">Today</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="num good" id="totalPresent">0</div>
+        <div class="lbl">Days Present</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="attendancePct" style="color:var(--blue)">0%</div>
+        <div class="lbl">Attendance</div>
+      </div>
+    </div>
+
+    <!-- Session Card -->
+    <div class="session-card">
+      <h3><span class="status-dot" id="statusDot"></span><span id="sessionStatus">Ready to Start</span></h3>
+      <p id="sessionMsg">Click "Start Session" to begin your 1-minute attendance timer. Stay on this page while working.</p>
+
+      <!-- Already marked today -->
+      <div class="done-badge" id="doneBadge" style="display:none">
+        <span>✅</span>
+        <div>
+          <p>Attendance marked for today!</p>
+          <small id="doneTime">Marked at --:--</small>
+        </div>
+      </div>
+
+      <!-- Timer Ring -->
+      <div class="timer-ring" id="timerRing" style="display:none">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle class="bg" cx="80" cy="80" r="65"/>
+          <circle class="progress" id="progressCircle" cx="80" cy="80" r="65"/>
+        </svg>
+        <div class="time-text">
+          <span id="timerDisplay">30:00</span>
+          <small>remaining</small>
+        </div>
+      </div>
+
+      <button class="btn-start" id="startBtn" onclick="startSession()">▶ Start Session</button>
+    </div>
+
+    <!-- Attendance History -->
+    <div class="history-card">
+      <h3>📋 Recent Attendance</h3>
+      <div id="historyList">
+        <p style="color:var(--muted);font-size:.87rem;text-align:center;padding:1rem">Loading...</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ATTENDANCE POPUP -->
+<div class="popup-overlay" id="attPopup">
+  <div class="popup-box">
+    <div class="popup-icon">🎉</div>
+    <h2>Attendance Marked!</h2>
+    <p>Your attendance for today has been recorded successfully. You have completed your 1-minute session.</p>
+    <button class="btn-ok" onclick="closePopup()">OK, Continue Working</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ── Init Supabase ──
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let timerInterval = null;
+let sessionStartTime = null;
+let sessionId = null;
+let totalSeconds = SESSION_DURATION_MINUTES * 60;
+let remainingSeconds = totalSeconds;
+
+// ── Helpers ──
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+function formatTime(secs) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+function formatDateTime(iso) {
+  if (!iso) return '--';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ── Login ──
+async function doLogin() {
+  const roll = document.getElementById('rollInput').value.trim().toUpperCase();
+  const pass = document.getElementById('passInput').value.trim();
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+
+  if (!roll || !pass) { errEl.textContent = 'Please enter roll number and password.'; errEl.style.display = 'block'; return; }
+
+  const btn = document.querySelector('.btn-primary');
+  btn.textContent = 'Logging in...'; btn.disabled = true;
+
+  try {
+    const { data, error } = await db
+      .from('users')
+      .select('*')
+      .eq('roll_number', roll)
+      .eq('password', pass)
+      .eq('role', 'student')
+      .eq('is_active', true)
+      .single();
+
+    if (error || !data) {
+      errEl.textContent = 'Invalid roll number or password.';
+      errEl.style.display = 'block';
+    } else {
+      currentUser = data;
+      localStorage.setItem('att_user', JSON.stringify(data));
+      showDashboard();
+    }
+  } catch (e) {
+    errEl.textContent = 'Connection error. Please try again.';
+    errEl.style.display = 'block';
+  }
+  btn.textContent = 'Login →'; btn.disabled = false;
+}
+
+// ── Dashboard ──
+async function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashboardScreen').style.display = 'block';
+  document.getElementById('logoutBtn').style.display = 'block';
+
+  document.getElementById('studentName').textContent = currentUser.name.split(' ')[0];
+  document.getElementById('rollDisplay').textContent = currentUser.roll_number;
+  document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  await loadStats();
+  await loadHistory();
+  await checkTodayStatus();
+  resumeSession();
+}
+
+async function loadStats() {
+  const { data } = await db.from('attendance').select('*').eq('student_id', currentUser.id).eq('status', 'present');
+  const total = data ? data.length : 0;
+  document.getElementById('totalPresent').textContent = total;
+  document.getElementById('attendancePct').textContent = total > 0 ? Math.min(100, Math.round((total / Math.max(total, 1)) * 100)) + '%' : '0%';
+}
+
+async function loadHistory() {
+  const { data } = await db.from('attendance').select('*').eq('student_id', currentUser.id).order('date', { ascending: false }).limit(7);
+  const list = document.getElementById('historyList');
+  if (!data || data.length === 0) {
+    list.innerHTML = '<p style="color:var(--muted);font-size:.87rem;text-align:center;padding:1rem">No attendance records yet.</p>';
+    return;
+  }
+  list.innerHTML = data.map(r => `
+    <div class="att-row">
+      <span class="att-date">${formatDate(r.date)}</span>
+      <span class="att-badge ${r.status === 'present' ? 'att-present' : 'att-absent'}">${r.status === 'present' ? '✓ Present' : '✗ Absent'}</span>
+    </div>
+  `).join('');
+}
+
+async function checkTodayStatus() {
+  const { data } = await db.from('attendance').select('*').eq('student_id', currentUser.id).eq('date', today()).single();
+  if (data) {
+    showAlreadyMarked(data.marked_at);
+  }
+}
+
+function showAlreadyMarked(time) {
+  document.getElementById('doneBadge').style.display = 'flex';
+  document.getElementById('doneTime').textContent = 'Marked at ' + formatDateTime(time);
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('startBtn').textContent = '✓ Attendance Done';
+  document.getElementById('statusDot').className = 'status-dot good';
+  document.getElementById('sessionStatus').textContent = 'Attendance Completed';
+  document.getElementById('sessionMsg').textContent = 'You have already marked your attendance for today. See you tomorrow!';
+}
+
+// ── Session Timer ──
+async function startSession() {
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true; btn.textContent = 'Starting...';
+
+  // Check already marked today
+  const { data: existing } = await db.from('attendance').select('*').eq('student_id', currentUser.id).eq('date', today()).single();
+  if (existing) { showAlreadyMarked(existing.marked_at); return; }
+
+  // Create session in DB
+  const { data: sess } = await db.from('sessions').insert({
+    student_id: currentUser.id,
+    center_id: currentUser.center_id,
+    start_time: new Date().toISOString(),
+    is_completed: false,
+    attendance_marked: false
+  }).select().single();
+
+  if (sess) {
+    sessionId = sess.id;
+    sessionStartTime = Date.now();
+    localStorage.setItem('att_session', JSON.stringify({ id: sessionId, start: sessionStartTime, userId: currentUser.id }));
+  }
+
+  remainingSeconds = totalSeconds;
+  startTimer();
+}
+
+function startTimer() {
+  document.getElementById('timerRing').style.display = 'block';
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('statusDot').className = 'status-dot active';
+  document.getElementById('sessionStatus').textContent = 'Session Active';
+  document.getElementById('sessionMsg').textContent = 'Keep this tab open while working. Your attendance will be marked automatically!';
+
+  const circle = document.getElementById('progressCircle');
+  const circumference = 408;
+
+  timerInterval = setInterval(async () => {
+    remainingSeconds--;
+    document.getElementById('timerDisplay').textContent = formatTime(remainingSeconds);
+
+    // Update progress ring
+    const progress = 1 - (remainingSeconds / totalSeconds);
+    circle.style.strokeDashoffset = circumference - (circumference * progress);
+
+    // Save remaining to localStorage for resume
+    localStorage.setItem('att_remaining', remainingSeconds);
+
+    if (remainingSeconds <= 0) {
+      clearInterval(timerInterval);
+      await markAttendance();
+    }
+  }, 1000);
+}
+
+function resumeSession() {
+  const saved = localStorage.getItem('att_session');
+  const savedRemaining = localStorage.getItem('att_remaining');
+  if (!saved || !savedRemaining) return;
+
+  const sess = JSON.parse(saved);
+  if (sess.userId !== currentUser.id) return;
+
+  const rem = parseInt(savedRemaining);
+  if (rem <= 0) return;
+
+  sessionId = sess.id;
+  remainingSeconds = rem;
+  startTimer();
+}
+
+async function markAttendance() {
+  // Insert attendance record
+  await db.from('attendance').insert({
+    student_id: currentUser.id,
+    center_id: currentUser.center_id,
+    session_id: sessionId,
+    date: today(),
+    status: 'present',
+    marked_at: new Date().toISOString()
+  });
+
+  // Update session as completed
+  if (sessionId) {
+    await db.from('sessions').update({ is_completed: true, attendance_marked: true, end_time: new Date().toISOString() }).eq('id', sessionId);
+  }
+
+  // Clear localStorage
+  localStorage.removeItem('att_session');
+  localStorage.removeItem('att_remaining');
+
+  // Show popup
+  document.getElementById('attPopup').classList.add('show');
+
+  // Update UI
+  showAlreadyMarked(new Date().toISOString());
+  loadHistory();
+  loadStats();
+}
+
+function closePopup() {
+  document.getElementById('attPopup').classList.remove('show');
+}
+
+// ── Logout ──
+function logout() {
+  if (timerInterval) clearInterval(timerInterval);
+  currentUser = null;
+  localStorage.removeItem('att_user');
+  document.getElementById('dashboardScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('rollInput').value = '';
+  document.getElementById('passInput').value = '';
+}
+
+// ── Auto login if session saved ──
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('att_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    showDashboard();
+  }
+});
+
+// ── Enter key login ──
+document.getElementById('passInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
+</body>
+</html>
