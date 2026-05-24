@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard – Padmashri Attendance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#091e42;--blue:#2ab5a0;--blue2:#1f9e8e;
+  --white:#fff;--off:#f7f9fc;--text:#101828;--muted:#475467;
+  --tr:.3s cubic-bezier(.4,0,.2,1);--r:14px;
+}
+body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--off);min-height:100vh}
+button{cursor:pointer;font-family:inherit}
+
+/* ── LOGIN ── */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:linear-gradient(135deg,#0d5750,#177a6d)}
+.login-card{background:#fff;border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.15);padding:2.5rem;width:100%;max-width:380px}
+.login-card h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.4rem;font-weight:800;color:var(--navy);margin-bottom:.3rem}
+.login-card p{font-size:.88rem;color:var(--muted);margin-bottom:1.8rem}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:.4rem}
+.field input{width:100%;padding:.72rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.92rem;outline:none;transition:border var(--tr)}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(42,181,160,.1)}
+.btn-login{width:100%;padding:.85rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;font-weight:700;font-size:.95rem;margin-top:.5rem}
+.err{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;padding:.65rem 1rem;font-size:.84rem;margin-bottom:1rem;display:none}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:linear-gradient(160deg,#0d5750,#177a6d);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:.3rem}
+.sidebar-brand{padding:.8rem .8rem 1.5rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sidebar-brand h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:.95rem;font-weight:700;color:#fff}
+.sidebar-brand span{font-size:.72rem;color:rgba(255,255,255,.6)}
+.nav-item{padding:.7rem .8rem;border-radius:10px;color:rgba(255,255,255,.7);font-size:.87rem;font-weight:500;cursor:pointer;transition:all var(--tr);display:flex;align-items:center;gap:.6rem;border:none;background:transparent;width:100%;text-align:left}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.18);color:#fff;font-weight:600}
+.nav-item .icon{font-size:1rem;width:20px;text-align:center}
+.main{padding:2rem;overflow-y:auto}
+
+/* ── TOPBAR ── */
+.main-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem}
+.main-topbar h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3rem;font-weight:800;color:var(--navy)}
+.main-topbar p{font-size:.85rem;color:var(--muted)}
+.logout-btn{background:transparent;border:1.5px solid #e2e8f0;border-radius:8px;padding:.45rem 1rem;font-size:.82rem;color:var(--muted);transition:all var(--tr)}
+.logout-btn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
+.stat-card{background:#fff;border-radius:16px;padding:1.3rem;box-shadow:0 4px 16px rgba(0,0,0,.05)}
+.stat-card .num{font-family:'Plus Jakarta Sans',sans-serif;font-size:2rem;font-weight:800;color:var(--blue)}
+.stat-card .lbl{font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:.2rem}
+
+/* ── CARD ── */
+.card{background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(0,0,0,.05);padding:1.5rem;margin-bottom:1.5rem}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem}
+.card-head h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:1rem;font-weight:700;color:var(--navy)}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:.87rem}
+th{text-align:left;font-weight:600;color:var(--muted);padding:.7rem .8rem;border-bottom:2px solid #f1f5f9;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+td{padding:.8rem .8rem;border-bottom:1px solid #f8fafc;color:var(--text)}
+tr:last-child td{border:none}
+tr:hover td{background:#f8fafc}
+
+/* ── BADGE ── */
+.badge{padding:.25rem .75rem;border-radius:20px;font-size:.75rem;font-weight:700}
+.badge-present{background:#dcfce7;color:#16a34a}
+.badge-absent{background:#fee2e2;color:#dc2626}
+.badge-low{background:#fef3c7;color:#d97706}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.f{margin-bottom:1rem}
+.f label{display:block;font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:.4rem}
+.f input,.f select{width:100%;padding:.68rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.87rem;outline:none;transition:border var(--tr)}
+.f input:focus,.f select:focus{border-color:var(--blue)}
+.btn-add{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border:none;border-radius:10px;padding:.7rem 1.5rem;font-size:.87rem;font-weight:700;transition:all var(--tr)}
+.btn-add:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(42,181,160,.3)}
+.btn-del{background:transparent;border:1.5px solid #fecaca;color:#dc2626;border-radius:8px;padding:.3rem .8rem;font-size:.78rem;transition:all var(--tr)}
+.btn-del:hover{background:#fee2e2}
+.btn-sm{background:transparent;border:1.5px solid #e2e8f0;color:var(--muted);border-radius:8px;padding:.3rem .8rem;font-size:.78rem;transition:all var(--tr)}
+.btn-sm:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── SEARCH ── */
+.search-row{display:flex;gap:.8rem;margin-bottom:1rem;flex-wrap:wrap}
+.search-row input,.search-row select{padding:.6rem 1rem;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none}
+.search-row input:focus{border-color:var(--blue)}
+
+/* ── PBAR ── */
+.pbar{height:6px;border-radius:3px;background:#f1f5f9;overflow:hidden;margin-top:4px;width:80px;display:inline-block;vertical-align:middle}
+.pbar-fill{height:100%;border-radius:3px}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:2rem;color:var(--muted);font-size:.88rem}
+
+/* ── ARCHIVE ── */
+.archive-box{background:linear-gradient(135deg,#fef3c7,#fde68a);border:1.5px solid #fcd34d;border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.archive-box h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:1rem;font-weight:700;color:#92400e;margin-bottom:.5rem}
+.archive-box p{font-size:.85rem;color:#78350f;margin-bottom:1rem;line-height:1.6}
+.btn-archive{background:#d97706;color:#fff;border:none;border-radius:10px;padding:.65rem 1.4rem;font-size:.85rem;font-weight:700}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(9,30,66,.6);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal-box{background:#fff;border-radius:20px;padding:2rem;max-width:480px;width:100%;transform:scale(.95);transition:transform .25s}
+.modal-overlay.show .modal-box{transform:scale(1)}
+.modal-box h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.1rem;font-weight:700;color:var(--navy);margin-bottom:1.2rem}
+.modal-close{float:right;background:transparent;border:none;font-size:1.3rem;color:var(--muted);cursor:pointer;margin-top:-.3rem}
+
+/* Responsive */
+@media(max-width:768px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-card">
+    <h2>🔐 Admin Login</h2>
+    <p>Padmashri Computer — Attendance Management</p>
+    <div class="err" id="adminErr">Invalid email or password.</div>
+    <div class="field"><label>Email</label><input type="email" id="adminEmail" placeholder="admin@padmashricomputer.org" /></div>
+    <div class="field"><label>Password</label><input type="password" id="adminPass" placeholder="Enter password" /></div>
+    <button class="btn-login" onclick="doAdminLogin()">Login to Dashboard →</button>
+    <p style="text-align:center;font-size:.75rem;color:var(--muted);margin-top:1rem">Demo: admin@padmashricomputer.org / admin123</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="appScreen" style="display:none">
+  <div class="app">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <h2>Padmashri Computer</h2>
+        <span>Admin Dashboard</span>
+      </div>
+      <button class="nav-item active" onclick="showPage('overview')" id="nav-overview"><span class="icon">📊</span> Overview</button>
+      <button class="nav-item" onclick="showPage('students')" id="nav-students"><span class="icon">👨‍🎓</span> Students</button>
+      <button class="nav-item" onclick="showPage('attendance')" id="nav-attendance"><span class="icon">📋</span> Attendance</button>
+      <button class="nav-item" onclick="showPage('reports')" id="nav-reports"><span class="icon">📈</span> Reports</button>
+      <button class="nav-item" onclick="showPage('settings')" id="nav-settings"><span class="icon">⚙️</span> Settings</button>
+      <div style="flex:1"></div>
+      <button class="nav-item" onclick="adminLogout()"><span class="icon">🚪</span> Logout</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main" id="mainContent">
+      <p style="color:var(--muted)">Loading...</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>➕ Add New Student</h3>
+    <div class="form-grid">
+      <div class="f"><label>Full Name *</label><input type="text" id="s-name" placeholder="Student name" /></div>
+      <div class="f"><label>Roll Number *</label><input type="text" id="s-roll" placeholder="e.g. MSCIT007" /></div>
+      <div class="f"><label>Password *</label><input type="text" id="s-pass" placeholder="Set a password" /></div>
+      <div class="f"><label>Phone</label><input type="tel" id="s-phone" placeholder="Mobile number" /></div>
+      <div class="f" style="grid-column:1/-1"><label>Email</label><input type="email" id="s-email" placeholder="student@email.com" /></div>
+    </div>
+    <button class="btn-add" onclick="addStudent()">Add Student</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let adminUser = null;
+let centerId = null;
+let allStudents = [];
+let allAttendance = [];
+
+// ── Admin Login ──
+async function doAdminLogin() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPass').value.trim();
+  const err = document.getElementById('adminErr');
+  err.style.display = 'none';
+
+  const btn = document.querySelector('.btn-login');
+  btn.textContent = 'Logging in...'; btn.disabled = true;
+
+  try {
+    const { data, error } = await db.from('users').select('*').eq('email', email).eq('password', pass).in('role', ['superadmin', 'admin']).single();
+    if (error || !data) { err.style.display = 'block'; }
+    else {
+      adminUser = data;
+      centerId = data.center_id;
+      localStorage.setItem('att_admin', JSON.stringify(data));
+      showApp();
+    }
+  } catch(e) { err.textContent = 'Connection error.'; err.style.display = 'block'; }
+  btn.textContent = 'Login to Dashboard →'; btn.disabled = false;
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  showPage('overview');
+}
+
+function adminLogout() {
+  localStorage.removeItem('att_admin');
+  adminUser = null;
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// ── Navigation ──
+function showPage(page) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const nav = document.getElementById('nav-' + page);
+  if (nav) nav.classList.add('active');
+
+  const pages = { overview: renderOverview, students: renderStudents, attendance: renderAttendance, reports: renderReports, settings: renderSettings };
+  if (pages[page]) pages[page]();
+}
+
+// ── Overview ──
+async function renderOverview() {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+
+  const [{ data: students }, { data: todayAtt }, { data: allAtt }] = await Promise.all([
+    db.from('users').select('*').eq('center_id', centerId).eq('role', 'student').eq('is_active', true),
+    db.from('attendance').select('*').eq('center_id', centerId).eq('date', today()),
+    db.from('attendance').select('*').eq('center_id', centerId)
+  ]);
+
+  const totalStudents = students ? students.length : 0;
+  const todayPresent = todayAtt ? todayAtt.length : 0;
+  const totalAtt = allAtt ? allAtt.length : 0;
+
+  // Low attendance students
+  const lowAtt = students ? students.filter(s => {
+    const sAtt = allAtt ? allAtt.filter(a => a.student_id === s.id) : [];
+    const pct = sAtt.length > 0 ? Math.round((sAtt.filter(a => a.status === 'present').length / sAtt.length) * 100) : 100;
+    return pct < 75 && sAtt.length > 0;
+  }) : [];
+
+  main.innerHTML = `
+    <div class="main-topbar">
+      <div><h1>Overview</h1><p>Welcome back, ${adminUser.name}! Here's today's summary.</p></div>
+      <button class="logout-btn" onclick="adminLogout()">Logout</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="num">${totalStudents}</div><div class="lbl">Total Students</div></div>
+      <div class="stat-card"><div class="num" style="color:#22c55e">${todayPresent}</div><div class="lbl">Present Today</div></div>
+      <div class="stat-card"><div class="num" style="color:#f59e0b">${totalStudents - todayPresent}</div><div class="lbl">Absent Today</div></div>
+      <div class="stat-card"><div class="num" style="color:#ef4444">${lowAtt.length}</div><div class="lbl">Low Attendance</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>📋 Today's Attendance — ${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3></div>
+      ${students && students.length > 0 ? `
+        <table>
+          <thead><tr><th>Roll No</th><th>Name</th><th>Status</th><th>Time</th></tr></thead>
+          <tbody>
+            ${students.map(s => {
+              const att = todayAtt ? todayAtt.find(a => a.student_id === s.id) : null;
+              return `<tr>
+                <td>${s.roll_number}</td>
+                <td>${s.name}</td>
+                <td><span class="badge ${att ? 'badge-present' : 'badge-absent'}">${att ? '✓ Present' : '✗ Absent'}</span></td>
+                <td style="color:var(--muted);font-size:.82rem">${att ? new Date(att.marked_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="empty">No students found. Add students first.</div>'}
+    </div>
+
+    ${lowAtt.length > 0 ? `
+      <div class="card">
+        <div class="card-head"><h3>⚠️ Low Attendance Alert</h3></div>
+        <table>
+          <thead><tr><th>Roll No</th><th>Name</th><th>Attendance %</th></tr></thead>
+          <tbody>
+            ${lowAtt.map(s => {
+              const sAtt = allAtt ? allAtt.filter(a => a.student_id === s.id) : [];
+              const pct = Math.round((sAtt.filter(a => a.status === 'present').length / sAtt.length) * 100);
+              return `<tr><td>${s.roll_number}</td><td>${s.name}</td><td><span class="badge badge-low">${pct}%</span></td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : ''}
+  `;
+}
+
+function today() { return new Date().toISOString().split('T')[0]; }
+
+// ── Students ──
+async function renderStudents() {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+
+  const { data } = await db.from('users').select('*').eq('center_id', centerId).eq('role', 'student').order('roll_number');
+  allStudents = data || [];
+
+  main.innerHTML = `
+    <div class="main-topbar">
+      <div><h1>Students</h1><p>${allStudents.length} students enrolled</p></div>
+      <button class="btn-add" onclick="openAddModal()">+ Add Student</button>
+    </div>
+
+    <div class="search-row">
+      <input type="text" placeholder="Search by name or roll no..." id="stuSearch" oninput="filterStudents()" style="flex:1;min-width:200px" />
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th>Roll No</th><th>Name</th><th>Phone</th><th>Email</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="stuTable">${renderStudentRows(allStudents)}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderStudentRows(list) {
+  if (!list.length) return '<tr><td colspan="6" class="empty">No students found.</td></tr>';
+  return list.map(s => `
+    <tr>
+      <td><strong>${s.roll_number}</strong></td>
+      <td>${s.name}</td>
+      <td>${s.phone || '—'}</td>
+      <td style="color:var(--muted);font-size:.82rem">${s.email || '—'}</td>
+      <td><span class="badge ${s.is_active ? 'badge-present' : 'badge-absent'}">${s.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td><button class="btn-del" onclick="deleteStudent('${s.id}', '${s.name}')">Remove</button></td>
+    </tr>
+  `).join('');
+}
+
+function filterStudents() {
+  const q = document.getElementById('stuSearch').value.toLowerCase();
+  const filtered = allStudents.filter(s => s.name.toLowerCase().includes(q) || (s.roll_number && s.roll_number.toLowerCase().includes(q)));
+  document.getElementById('stuTable').innerHTML = renderStudentRows(filtered);
+}
+
+function openAddModal() { document.getElementById('addModal').classList.add('show'); }
+function closeModal() { document.getElementById('addModal').classList.remove('show'); }
+
+async function addStudent() {
+  const name = document.getElementById('s-name').value.trim();
+  const roll = document.getElementById('s-roll').value.trim().toUpperCase();
+  const pass = document.getElementById('s-pass').value.trim();
+  const phone = document.getElementById('s-phone').value.trim();
+  const email = document.getElementById('s-email').value.trim();
+
+  if (!name || !roll || !pass) { alert('Name, Roll Number and Password are required.'); return; }
+
+  const btn = document.querySelector('#addModal .btn-add');
+  btn.textContent = 'Adding...'; btn.disabled = true;
+
+  const { error } = await db.from('users').insert({ center_id: centerId, name, roll_number: roll, password: pass, phone, email, role: 'student', is_active: true });
+
+  if (error) { alert('Error: ' + (error.message || 'Roll number may already exist.')); }
+  else {
+    alert(`✅ Student ${name} added successfully!`);
+    closeModal();
+    ['s-name','s-roll','s-pass','s-phone','s-email'].forEach(id => document.getElementById(id).value = '');
+    renderStudents();
+  }
+  btn.textContent = 'Add Student'; btn.disabled = false;
+}
+
+async function deleteStudent(id, name) {
+  if (!confirm(`Remove ${name} from the system? This will also delete their attendance records.`)) return;
+  await db.from('attendance').delete().eq('student_id', id);
+  await db.from('sessions').delete().eq('student_id', id);
+  await db.from('users').delete().eq('id', id);
+  alert(`${name} removed.`);
+  renderStudents();
+}
+
+// ── Attendance ──
+async function renderAttendance() {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+
+  const dateFilter = today();
+  const { data: att } = await db.from('attendance').select('*, users(name, roll_number)').eq('center_id', centerId).eq('date', dateFilter).order('marked_at', { ascending: false });
+  const { data: students } = await db.from('users').select('*').eq('center_id', centerId).eq('role', 'student').eq('is_active', true);
+
+  main.innerHTML = `
+    <div class="main-topbar">
+      <div><h1>Attendance Records</h1><p>View and filter daily attendance</p></div>
+    </div>
+
+    <div class="search-row">
+      <input type="date" id="attDate" value="${dateFilter}" onchange="loadAttByDate(this.value)" />
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Attendance — ${new Date(dateFilter).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+        <span style="font-size:.85rem;color:var(--muted)">${att ? att.length : 0} / ${students ? students.length : 0} present</span>
+      </div>
+      <table>
+        <thead><tr><th>Roll No</th><th>Name</th><th>Status</th><th>Time Marked</th></tr></thead>
+        <tbody id="attTable">
+          ${students ? students.map(s => {
+            const a = att ? att.find(x => x.student_id === s.id) : null;
+            return `<tr>
+              <td>${s.roll_number}</td>
+              <td>${s.name}</td>
+              <td><span class="badge ${a ? 'badge-present' : 'badge-absent'}">${a ? '✓ Present' : '✗ Absent'}</span></td>
+              <td style="color:var(--muted);font-size:.82rem">${a ? new Date(a.marked_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'}</td>
+            </tr>`;
+          }).join('') : ''}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function loadAttByDate(date) {
+  const { data: att } = await db.from('attendance').select('*, users(name, roll_number)').eq('center_id', centerId).eq('date', date).order('marked_at', { ascending: false });
+  const { data: students } = await db.from('users').select('*').eq('center_id', centerId).eq('role', 'student').eq('is_active', true);
+
+  document.getElementById('attTable').innerHTML = students ? students.map(s => {
+    const a = att ? att.find(x => x.student_id === s.id) : null;
+    return `<tr>
+      <td>${s.roll_number}</td>
+      <td>${s.name}</td>
+      <td><span class="badge ${a ? 'badge-present' : 'badge-absent'}">${a ? '✓ Present' : '✗ Absent'}</span></td>
+      <td style="color:var(--muted);font-size:.82rem">${a ? new Date(a.marked_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'}</td>
+    </tr>`;
+  }).join('') : '';
+}
+
+// ── Reports ──
+async function renderReports() {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+
+  const { data: students } = await db.from('users').select('*').eq('center_id', centerId).eq('role', 'student').eq('is_active', true);
+  const { data: allAtt } = await db.from('attendance').select('*').eq('center_id', centerId);
+
+  main.innerHTML = `
+    <div class="main-topbar">
+      <div><h1>Reports</h1><p>Student-wise attendance summary</p></div>
+      <button class="btn-add" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th>Roll No</th><th>Name</th><th>Days Present</th><th>Attendance %</th><th>Status</th></tr></thead>
+        <tbody>
+          ${students ? students.map(s => {
+            const sAtt = allAtt ? allAtt.filter(a => a.student_id === s.id) : [];
+            const present = sAtt.filter(a => a.status === 'present').length;
+            const total = sAtt.length;
+            const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+            const color = pct >= 75 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+            return `<tr>
+              <td>${s.roll_number}</td>
+              <td>${s.name}</td>
+              <td>${present} days</td>
+              <td>
+                <div class="pbar"><div class="pbar-fill" style="width:${pct}%;background:${color}"></div></div>
+                <span style="margin-left:8px;font-weight:600;color:${color}">${pct}%</span>
+              </td>
+              <td><span class="badge ${pct >= 75 ? 'badge-present' : 'badge-low'}">${pct >= 75 ? 'Good' : 'Low'}</span></td>
+            </tr>`;
+          }).join('') : ''}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  window._reportStudents = students;
+  window._reportAtt = allAtt;
+}
+
+function exportCSV() {
+  if (!window._reportStudents) return;
+  const rows = [['Roll No', 'Name', 'Days Present', 'Attendance %']];
+  window._reportStudents.forEach(s => {
+    const sAtt = window._reportAtt ? window._reportAtt.filter(a => a.student_id === s.id) : [];
+    const present = sAtt.filter(a => a.status === 'present').length;
+    const pct = sAtt.length > 0 ? Math.round((present / sAtt.length) * 100) : 0;
+    rows.push([s.roll_number, s.name, present, pct + '%']);
+  });
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'attendance_report_' + today() + '.csv';
+  a.click();
+}
+
+// ── Settings ──
+async function renderSettings() {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = `
+    <div class="main-topbar">
+      <div><h1>Settings</h1><p>Manage batch and system settings</p></div>
+    </div>
+
+    <div class="archive-box">
+      <h3>🗂️ Archive & Reset Batch</h3>
+      <p>When a new batch starts, export the current attendance report first, then clear the data for a fresh start. Student logins will be preserved.</p>
+      <button class="btn-archive" onclick="archiveBatch()">Export Report & Clear Attendance</button>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>⚙️ Session Duration</h3></div>
+      <p style="font-size:.88rem;color:var(--muted);margin-bottom:1rem">Current session duration: <strong>${SESSION_DURATION_MINUTES} minutes</strong></p>
+      <p style="font-size:.85rem;color:var(--muted)">To change session duration, edit the <code>config.js</code> file and update <code>SESSION_DURATION_MINUTES</code>.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>ℹ️ System Info</h3></div>
+      <table>
+        <tr><td style="color:var(--muted)">Center</td><td>${CENTER_NAME}</td></tr>
+        <tr><td style="color:var(--muted)">Admin</td><td>${adminUser.name}</td></tr>
+        <tr><td style="color:var(--muted)">Database</td><td>Supabase (Connected)</td></tr>
+        <tr><td style="color:var(--muted)">Version</td><td>1.0.0</td></tr>
+      </table>
+    </div>
+  `;
+}
+
+async function archiveBatch() {
+  if (!confirm('This will export attendance data and clear ALL attendance records. Student accounts will be kept. Continue?')) return;
+
+  // Export first
+  exportCSV();
+
+  // Wait then clear
+  setTimeout(async () => {
+    if (!confirm('Export done? Now clear all attendance records?')) return;
+    await db.from('attendance').delete().eq('center_id', centerId);
+    await db.from('sessions').delete().eq('center_id', centerId);
+    alert('✅ Batch archived! Attendance records cleared. Ready for new batch.');
+    renderOverview();
+  }, 1500);
+}
+
+// ── Auto login ──
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('att_admin');
+  if (saved) { adminUser = JSON.parse(saved); centerId = adminUser.center_id; showApp(); }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doAdminLogin();
+});
+</script>
+</body>
+</html>
