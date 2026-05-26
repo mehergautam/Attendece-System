@@ -39,7 +39,7 @@ Running an MSCIT center means dealing with:
 
 ---
 
-## ✅ The Solution — Minute Self Attendance
+## ✅ The Solution — 30 Minute Self Attendance
 
 ```
 Student arrives at center
