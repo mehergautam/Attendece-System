@@ -3,7 +3,6 @@
 <img src="https://capsule-render.vercel.app/api?type=waving&color=2ab5a0&height=200&section=header&text=MSCIT%20Attendance&fontSize=60&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Smart%20Self-Attendance%20System%20for%20Computer%20Centers&descAlignY=60&descColor=e0fdf4" width="100%"/>
 
 <br/>
-
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-Visit%20Now-2ab5a0?style=for-the-badge)](https://mehergautam.github.io/Attendece-System/portal.html)
 [![GitHub](https://img.shields.io/badge/GitHub-mehergautam-091e42?style=for-the-badge&logo=github&logoColor=white)](https://github.com/mehergautam/Attendece-System)
 [![Made in India](https://img.shields.io/badge/Made%20with%20❤️%20in-India-FF9933?style=for-the-badge)](https://github.com/mehergautam/Attendece-System)
